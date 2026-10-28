@@ -34,6 +34,11 @@ done
 
 api=http://127.0.0.1:$port/v1
 
+# goose asks to share usage data at its first start, with yes preselected.
+# Nothing here leaves your machine unless you say so: set
+# GOOSE_TELEMETRY_OFF=0 to be asked.
+export GOOSE_TELEMETRY_OFF=${GOOSE_TELEMETRY_OFF:-1}
+
 served_models() {
   curl -fsS --max-time 2 "$api/models" 2>/dev/null | jq -r '.data[].id' 2>/dev/null
 }

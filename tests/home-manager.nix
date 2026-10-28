@@ -35,5 +35,6 @@ pkgs.runCommand "mesh-agents-home-manager" { } ''
   grep -q 'Qwen3-8B-Q4_K_M' $(grep -o '/nix/store/[^ ]*mesh-llm-config.toml' $node)
   test -x ${files}/home-path/bin/mesh-agents
   test -x ${files}/home-path/bin/goose
+  grep -q "GOOSE_TELEMETRY_OFF=\"1\"" ${files}/home-path/etc/profile.d/hm-session-vars.sh
   touch $out
 ''

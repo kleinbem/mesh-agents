@@ -87,9 +87,13 @@ in
       "join:${cfg.joinFile}"
     ];
 
-    environment.systemPackages = lib.mkIf cfg.goose.enable [
-      pkgs.goose-cli
-      pkgs.mesh-agents
-    ];
+    environment = lib.mkIf cfg.goose.enable {
+      systemPackages = [
+        pkgs.goose-cli
+        pkgs.mesh-agents
+      ];
+      # goose otherwise asks to share usage data, with yes preselected.
+      sessionVariables.GOOSE_TELEMETRY_OFF = lib.mkDefault "1";
+    };
   };
 }

@@ -8,7 +8,8 @@ nix run github:kleinbem/mesh-agents
 
 That starts a [MeshLLM](https://github.com/Mesh-LLM/mesh-llm) node on your
 machine with an open model, and a [goose](https://github.com/aaif-goose/goose)
-agent on top of it. No API keys, no cloud, nothing leaves your machine.
+agent on top of it. No API keys, no cloud, nothing leaves your machine:
+goose's usage reporting is off by default, and MeshLLM's is built without it.
 
 Add your other machines and they become one mesh: a model too big for your
 laptop runs split across the desktop and the GPU box, and every agent on every
@@ -73,6 +74,23 @@ The first machine creates the mesh and prints an invite token at its first
 start (`journalctl -u mesh-llm`). Put the token in a file on each other machine
 (sops-nix, agenix, or by hand) and point `services.mesh-agents.joinFile` at it.
 
+### Agents in your team chat (Buzz)
+
+Give your agents a seat in a self-hosted [Buzz](https://github.com/block/buzz)
+workspace: @mention one in a channel and it answers there, thinking on your
+own mesh.
+
+```nix
+services.mesh-agents.buzz.agents.helper = {
+  relayUrl = "wss://buzz.example.com";
+  privateKeyFile = "/run/secrets/buzz-helper-key";  # buzz-admin generate-key
+  owner = "<your hex public key>";                  # who it answers
+};
+```
+
+Register the agent's public key on the relay once with
+`buzz-admin add-member --pubkey <key>`.
+
 ## Any Linux or macOS (home-manager)
 
 The same node as a user service (systemd on Linux, launchd on macOS), no
@@ -113,7 +131,6 @@ upstream after that.
 
 - Public binary cache, so nothing compiles on your machine
 - nix-darwin module
-- Agents in Buzz: your agents as members of your own team chat
 - A daily `unstable` channel built from each project's main branch
 
 ## License
