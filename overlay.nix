@@ -5,6 +5,12 @@ let
   upstream = inputs.nix-packages.overlays.default final prev;
 in
 {
-  inherit (upstream) mesh-llm mesh-llm-cuda mesh-llm-rocm;
+  inherit (upstream)
+    mesh-llm
+    mesh-llm-cuda
+    mesh-llm-rocm
+    buzz-acp
+    buzz-cli
+    ;
   mesh-agents = final.callPackage ./pkgs/mesh-agents { };
 }
