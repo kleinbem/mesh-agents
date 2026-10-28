@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
-# Push the current build to the public cache (mesh-agents-cache.kleinbem.dev,
-# an R2 bucket) and delete everything else in it, so it holds exactly one
-# build. Only paths cache.nixos.org doesn't have stay.
+# Push the current build to the public cache (cache.kleinbem.dev, an R2
+# bucket shared by several projects) and drop this project's older builds.
+# Only paths cache.nixos.org doesn't have stay.
 #
-# Env: CACHE_STORE (s3://… store URL), CACHE_SIGNING_KEY, and the S3
-# credentials as AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY.
+# Each project lists what its current build uses in roots/<project>; an
+# object no roots list mentions is deleted, once it is a day old (so a
+# project's upload is safe while its push is still running).
+#
+# Env: CACHE_STORE (s3://… store URL), CACHE_SIGNING_KEY, the S3 credentials
+# as AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY, and CACHE_PROJECT (default:
+# the GitHub repository's name). CACHE_GRACE (default "1 day") is the age
+# below which nothing is deleted.
 # Args: the flake's packages to push, e.g. `.#mesh-llm .#skippy`.
 set -euo pipefail
 
+project=${CACHE_PROJECT:-${GITHUB_REPOSITORY#*/}}
 limit_bytes=$((8 * 1024 * 1024 * 1024))
 # Ask the bucket, not Nix's local memory of it: objects get deleted below.
 export NIX_CONFIG="narinfo-cache-positive-ttl = 0
@@ -46,7 +53,7 @@ echo "${#closure[@]} paths in the closure, ${#push[@]} not on cache.nixos.org"
 size=$(nix path-info --json "${push[@]}" | jq "[$infos | .narSize] | add // 0")
 echo "pushing $((size / 1024 / 1024)) MiB (uncompressed)"
 if [ "$size" -gt "$limit_bytes" ]; then
-  echo "refusing: over the $((limit_bytes / 1024 / 1024 / 1024)) GiB limit that keeps the bucket in R2's free tier" >&2
+  echo "refusing: over the $((limit_bytes / 1024 / 1024 / 1024)) GiB limit per project (R2's free tier is 10 GB for all)" >&2
   exit 1
 fi
 
@@ -54,17 +61,29 @@ fi
 # whole closure goes up; the cleanup below drops what cache.nixos.org serves.
 nix copy --to "$store" "${push[@]}"
 
-# What the current build needs: nix-cache-info, its narinfos and their NARs.
+# What the current build needs: its narinfos and their NARs.
+nix path-info --store "$CACHE_STORE" --json "${push[@]}" |
+  jq -r "$infos"' | (.path | ltrimstr("/nix/store/") | split("-")[0] + ".narinfo"), .url' |
+  sort -u >"$work/root"
+s3 put-object --bucket "$bucket" --key "roots/$project" --body "$work/root" >/dev/null
+
+s3 list-objects-v2 --bucket "$bucket" --output json |
+  jq -r '.Contents // [] | .[] | "\(.Key)\t\(.LastModified)"' >"$work/present"
+# Everything any project's current build needs, and the cache's own files.
 {
   echo nix-cache-info
-  nix path-info --store "$CACHE_STORE" --json "${push[@]}" |
-    jq -r "$infos"' | (.path | ltrimstr("/nix/store/") | split("-")[0] + ".narinfo"), .url'
+  while read -r key; do
+    echo "$key"
+    s3 get-object --bucket "$bucket" --key "$key" "$work/other-root" >/dev/null
+    cat "$work/other-root"
+  done < <(cut -f1 "$work/present" | grep '^roots/')
 } | sort -u >"$work/keep"
 
-s3 list-objects-v2 --bucket "$bucket" --query 'Contents[].Key' --output text |
-  tr '\t' '\n' | grep -v '^None$' | sort -u >"$work/present"
-comm -23 "$work/present" "$work/keep" >"$work/stale"
-echo "deleting $(wc -l <"$work/stale") objects of older builds"
+cutoff=$(date -u -d "${CACHE_GRACE:-1 day} ago" +%s)
+while IFS=$'\t' read -r key modified; do
+  if [ "$(date -u -d "$modified" +%s)" -lt "$cutoff" ]; then echo "$key"; fi
+done <"$work/present" | sort -u | comm -23 - "$work/keep" >"$work/stale"
+echo "deleting $(wc -l <"$work/stale") objects no project uses any more"
 while read -r key; do
   s3 delete-object --bucket "$bucket" --key "$key" >/dev/null
 done <"$work/stale"
