@@ -30,9 +30,17 @@ jobs:
         run: nix flake check
       - name: Formatting
         run: nix fmt -- --fail-on-change
-      - name: Build every package for the cache
+      # Only main's latest build stays: each package is pinned with one
+      # revision kept, and the cache's short retention collects the rest.
+      # Without the CUDA/ROCm variants: they'd fill the cache's storage, and
+      # GPU users build them once locally.
+      - name: Build and pin the packages for the cache
         if: github.event_name == 'push' && env.CACHIX_AUTH_TOKEN != ''
         run: |
           nix eval --json .#packages.x86_64-linux --apply builtins.attrNames \
-            | jq -r '.[] | ".#\(.)"' \
-            | xargs nix build --no-link
+            | jq -r '.[] | select(test("-(cuda|rocm)$") | not) | select(. != "default")' \
+            | while read -r name; do
+                out=$(nix build --no-link --print-out-paths ".#$name")
+                cachix push mesh-agents "$out"
+                cachix pin mesh-agents "$name" "$out" --keep-revisions 1
+              done
