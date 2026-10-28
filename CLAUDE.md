@@ -6,10 +6,11 @@ user-visible change.
 
 | Path | What lives here |
 |---|---|
-| `flake.nix` | Packages (the stack, re-exported), `nixosModules.default`, `overlays.default`, checks, treefmt. |
+| `flake.nix` | Packages (the stack, re-exported), `nixosModules.default`, `homeManagerModules.default`, `overlays.default`, checks, treefmt. |
 | `pkgs/mesh-agents/` | The `nix run` launcher: starts a private node unless one listens on the API port, then `mesh-llm goose`. |
 | `modules/nixos/mesh-agents.nix` | `services.mesh-agents`, on top of nixpkgs' `services.mesh-llm` (NixOS/nixpkgs#571722). |
-| `tests/module.nix` | The module evaluated and built on a minimal system. |
+| `modules/home-manager/mesh-agents.nix` | The same node as a user service: systemd on Linux, launchd on macOS. |
+| `tests/` | The NixOS module on a minimal system, the home-manager module in a user's configuration. |
 
 - Packages come from `kleinbem/nix-packages` for now; moving the Block AI ones
   here (and nix-packages consuming this flake) is the next step.

@@ -73,6 +73,27 @@ The first machine creates the mesh and prints an invite token at its first
 start (`journalctl -u mesh-llm`). Put the token in a file on each other machine
 (sops-nix, agenix, or by hand) and point `services.mesh-agents.joinFile` at it.
 
+## Any Linux or macOS (home-manager)
+
+The same node as a user service (systemd on Linux, launchd on macOS), no
+NixOS needed:
+
+```nix
+{
+  imports = [ mesh-agents.homeManagerModules.default ];
+
+  services.mesh-agents = {
+    enable = true;
+    models = [ "Qwen3-8B-Q4_K_M" ];
+    # joinFile = "/path/to/invite-token";  # every node but the first
+  };
+}
+```
+
+The first node prints its invite token to its log: `journalctl --user -u
+mesh-llm` on Linux, `~/Library/Logs/mesh-agents.log` on macOS. Set
+`autoStart = false` on a laptop to start the node only when you need it.
+
 ## What's inside
 
 | Package | What it is |
@@ -91,7 +112,7 @@ upstream after that.
 ## Roadmap
 
 - Public binary cache, so nothing compiles on your machine
-- home-manager and nix-darwin modules
+- nix-darwin module
 - Agents in Buzz: your agents as members of your own team chat
 - A daily `unstable` channel built from each project's main branch
 

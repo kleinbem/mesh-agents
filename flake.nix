@@ -8,6 +8,9 @@
     # (NixOS/nixpkgs#571722), the Buzz suite, Berd and friends.
     nix-packages.url = "github:kleinbem/nix-packages";
     nix-packages.inputs.nixpkgs.follows = "nixpkgs";
+    # Only for the home-manager module's check.
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -32,6 +35,10 @@
             ./modules/nixos/mesh-agents.nix
           ];
           nixpkgs.overlays = [ inputs.self.overlays.default ];
+        };
+
+        homeManagerModules.default = import ./modules/home-manager/mesh-agents.nix {
+          inherit (inputs.self) packages;
         };
       };
 
@@ -70,6 +77,11 @@
             module = import ./tests/module.nix {
               inherit pkgs;
               module = inputs.self.nixosModules.default;
+            };
+            home-manager = import ./tests/home-manager.nix {
+              inherit pkgs;
+              inherit (inputs) home-manager;
+              module = inputs.self.homeManagerModules.default;
             };
           };
 
