@@ -15,9 +15,9 @@ jobs:
         run: nix flake check
       - name: Formatting
         run: nix fmt -- --fail-on-change
-      # The public cache users substitute from (mesh-agents-cache.kleinbem.dev,
-      # kleinbem/nix infra/mesh-agents-cache.tf): main's build replaces the
-      # previous one. Skipped until the secrets exist. No CUDA/ROCm variants:
+      # The public cache users substitute from (cache.kleinbem.dev, shared
+      # with other projects; kleinbem/nix infra/public-cache.tf): main's build
+      # replaces the previous one. Skipped until the secrets exist. No CUDA/ROCm variants:
       # they'd outgrow the free tier, and GPU users build them once.
       - name: Push to the public cache
         if: github.event_name == 'push' && vars.CACHE_STORE != ''
