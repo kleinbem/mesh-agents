@@ -24,5 +24,6 @@ pkgs.runCommand "mesh-agents-module" { } ''
   grep -q 'LoadCredential=join:/run/secrets/mesh-agents-join' ${unit}/mesh-llm.service
   test -x ${nixos.config.system.path}/bin/mesh-agents
   test -x ${nixos.config.system.path}/bin/goose
+  grep -q GOOSE_TELEMETRY_OFF ${nixos.config.system.build.setEnvironment}
   touch $out
 ''

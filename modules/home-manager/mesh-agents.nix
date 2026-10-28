@@ -98,12 +98,14 @@ in
 
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
-      {
-        home.packages = lib.optionals cfg.goose.enable [
+      (lib.mkIf cfg.goose.enable {
+        home.packages = [
           stack.goose-cli
           stack.mesh-agents
         ];
-      }
+        # goose otherwise asks to share usage data, with yes preselected.
+        home.sessionVariables.GOOSE_TELEMETRY_OFF = lib.mkDefault "1";
+      })
 
       (lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
         systemd.user.services.mesh-llm = {

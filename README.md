@@ -8,7 +8,8 @@ nix run github:kleinbem/mesh-agents
 
 That starts a [MeshLLM](https://github.com/Mesh-LLM/mesh-llm) node on your
 machine with an open model, and a [goose](https://github.com/aaif-goose/goose)
-agent on top of it. No API keys, no cloud, nothing leaves your machine.
+agent on top of it. No API keys, no cloud, nothing leaves your machine:
+goose's usage reporting is off by default, and MeshLLM's is built without it.
 
 Add your other machines and they become one mesh: a model too big for your
 laptop runs split across the desktop and the GPU box, and every agent on every
