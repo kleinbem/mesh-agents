@@ -8,31 +8,25 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    env:
-      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: kleinbem/actions/nix-setup@7ec628296d5194e6e10031706387b992a10a1638 # v1.0.1
-        with:
-          # Read-only Attic over NetBird; skipped when the secrets are
-          # absent (fork PRs, Dependabot).
-          netbird-setup-key: ${{ secrets.NETBIRD_SETUP_KEY_EPHEMERAL }}
-          attic-token: ${{ secrets.ATTIC_PULL_TOKEN }}
-      # The public cache users substitute from. Reads always; pushes what this
-      # job builds on main. Skipped until the token exists (nix/infra).
-      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        if: env.CACHIX_AUTH_TOKEN != ''
-        with:
-          name: mesh-agents
-          authToken: ${{ env.CACHIX_AUTH_TOKEN }}
-          skipPush: ${{ github.event_name != 'push' }}
       - name: Checks
         run: nix flake check
       - name: Formatting
         run: nix fmt -- --fail-on-change
-      - name: Build every package for the cache
-        if: github.event_name == 'push' && env.CACHIX_AUTH_TOKEN != ''
+      # The public cache users substitute from (mesh-agents-cache.kleinbem.dev,
+      # kleinbem/nix infra/mesh-agents-cache.tf): main's build replaces the
+      # previous one. Skipped until the secrets exist. No CUDA/ROCm variants:
+      # they'd outgrow the free tier, and GPU users build them once.
+      - name: Push to the public cache
+        if: github.event_name == 'push' && vars.CACHE_STORE != ''
+        env:
+          CACHE_STORE: ${{ vars.CACHE_STORE }}
+          CACHE_SIGNING_KEY: ${{ secrets.CACHE_SIGNING_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.CACHE_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CACHE_SECRET_ACCESS_KEY }}
         run: |
-          nix eval --json .#packages.x86_64-linux --apply builtins.attrNames \
-            | jq -r '.[] | ".#\(.)"' \
-            | xargs nix build --no-link
+          mapfile -t pkgs < <(nix eval --json .#packages.x86_64-linux --apply builtins.attrNames |
+            jq -r '.[] | select(test("-(cuda|rocm)$") or . == "default" | not) | ".#\(.)"')
+          nix shell nixpkgs#awscli2 --command .github/scripts/push-cache.sh "${pkgs[@]}"
