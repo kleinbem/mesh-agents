@@ -65,13 +65,17 @@
           mesh-agents = pkgs.callPackage ./pkgs/mesh-agents {
             inherit (upstream) mesh-llm;
           };
+          mesh-agents-berd = mesh-agents.override { inherit (upstream) berd; };
         in
         {
-          packages = lib.mapAttrs (name: _: upstream.${name}) stack // {
-            inherit mesh-agents;
-            inherit (pkgs) goose-cli;
-            default = mesh-agents;
-          };
+          packages =
+            lib.mapAttrs (name: _: upstream.${name}) stack
+            // {
+              inherit mesh-agents;
+              inherit (pkgs) goose-cli;
+              default = mesh-agents;
+            }
+            // lib.optionalAttrs (upstream ? berd) { inherit mesh-agents-berd; };
 
           checks = lib.optionalAttrs pkgs.stdenv.isLinux {
             module = import ./tests/module.nix {

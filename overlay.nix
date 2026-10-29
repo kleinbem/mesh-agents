@@ -7,4 +7,5 @@ in
 {
   inherit (upstream) mesh-llm mesh-llm-cuda mesh-llm-rocm;
   mesh-agents = final.callPackage ./pkgs/mesh-agents { };
+  mesh-agents-berd = final.mesh-agents.override { inherit (upstream) berd; };
 }

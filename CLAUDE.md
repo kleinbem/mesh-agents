@@ -7,7 +7,7 @@ user-visible change.
 | Path | What lives here |
 |---|---|
 | `flake.nix` | Packages (the stack, re-exported), `nixosModules.default`, `homeManagerModules.default`, `overlays.default`, checks, treefmt. |
-| `pkgs/mesh-agents/` | The `nix run` launcher: starts a private node unless one listens on the API port, then `mesh-llm goose`. |
+| `pkgs/mesh-agents/` | The `nix run` launcher: starts a private node unless one listens on the API port, then `mesh-llm goose`, or Berd with goose's `mesh` provider (`mesh-agents-berd`). |
 | `modules/nixos/mesh-agents.nix` | `services.mesh-agents`, on top of nixpkgs' `services.mesh-llm` (NixOS/nixpkgs#571722). |
 | `modules/home-manager/mesh-agents.nix` | The same node as a user service: systemd on Linux, launchd on macOS. |
 | `tests/` | The NixOS module on a minimal system, the home-manager module in a user's configuration. |
