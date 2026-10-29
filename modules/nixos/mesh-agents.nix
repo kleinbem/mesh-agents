@@ -65,35 +65,65 @@ in
       default = true;
       description = "Whether to install goose and `mesh-agents`, set up for the local node.";
     };
-  };
 
-  config = lib.mkIf cfg.enable {
-    services.mesh-llm = {
-      enable = true;
-      inherit (cfg) package meshPort openFirewall;
-      settings = lib.mkIf (cfg.models != [ ]) {
-        version = 1;
-        models = map (model: { inherit model; }) cfg.models;
-      };
-      # The service's user can't read a file only root can, so systemd reads
-      # it as a credential.
-      extraArgs = lib.optionals (cfg.joinFile != null) [
-        "--join-file"
-        "%d/join"
-      ];
-    };
-
-    systemd.services.mesh-llm.serviceConfig.LoadCredential = lib.mkIf (cfg.joinFile != null) [
-      "join:${cfg.joinFile}"
-    ];
-
-    environment = lib.mkIf cfg.goose.enable {
-      systemPackages = [
-        pkgs.goose-cli
-        pkgs.mesh-agents
-      ];
-      # goose otherwise asks to share usage data, with yes preselected.
-      sessionVariables.GOOSE_TELEMETRY_OFF = lib.mkDefault "1";
+    berd.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Whether to install Berd, the desktop app on goose, with a menu entry
+        that opens it on the local node (`mesh-agents-berd`). Linux only.
+      '';
     };
   };
+
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      {
+        services.mesh-llm = {
+          enable = true;
+          inherit (cfg) package meshPort openFirewall;
+          settings = lib.mkIf (cfg.models != [ ]) {
+            version = 1;
+            models = map (model: { inherit model; }) cfg.models;
+          };
+          # The service's user can't read a file only root can, so systemd reads
+          # it as a credential.
+          extraArgs = lib.optionals (cfg.joinFile != null) [
+            "--join-file"
+            "%d/join"
+          ];
+        };
+
+        systemd.services.mesh-llm.serviceConfig.LoadCredential = lib.mkIf (cfg.joinFile != null) [
+          "join:${cfg.joinFile}"
+        ];
+
+        environment = lib.mkIf cfg.goose.enable {
+          systemPackages = [
+            pkgs.goose-cli
+            pkgs.mesh-agents
+          ];
+          # goose otherwise asks to share usage data, with yes preselected.
+          sessionVariables.GOOSE_TELEMETRY_OFF = lib.mkDefault "1";
+        };
+      }
+
+      (lib.mkIf cfg.berd.enable {
+        environment.systemPackages = [
+          pkgs.mesh-agents-berd
+          (pkgs.makeDesktopItem {
+            name = "mesh-agents-berd";
+            desktopName = "Berd (mesh-agents)";
+            comment = "Berd on your private MeshLLM node";
+            exec = "mesh-agents-berd";
+            icon = "Berd";
+            categories = [
+              "Development"
+              "Utility"
+            ];
+          })
+        ];
+      })
+    ]
+  );
 }

@@ -47,6 +47,13 @@ nix run github:kleinbem/mesh-agents -- --model Qwen3-4B-Q4_K_M
 `nix run nixpkgs#mesh-llm -- models recommended` lists the models. The node
 only lives as long as the session and never joins or publishes a public mesh.
 
+Prefer a desktop app to the terminal? [Berd](https://github.com/block/berd)
+runs the same goose agent in a window (Linux):
+
+```bash
+nix run github:kleinbem/mesh-agents#mesh-agents-berd
+```
+
 ## Run it on your machines (NixOS)
 
 ```nix
@@ -95,15 +102,20 @@ The first node prints its invite token to its log: `journalctl --user -u
 mesh-llm` on Linux, `~/Library/Logs/mesh-agents.log` on macOS. Set
 `autoStart = false` on a laptop to start the node only when you need it.
 
+`berd.enable = true` (both modules, Linux) installs Berd with a menu entry,
+"Berd (mesh-agents)", that opens it on the local node.
+
 ## What's inside
 
 | Package | What it is |
 |---|---|
 | `mesh-agents` | The launcher behind `nix run` |
+| `mesh-agents-berd` | The same launcher, opening [Berd](https://github.com/block/berd), the desktop app on goose |
 | `mesh-llm`, `skippy` | Distributed LLM inference over a peer-to-peer mesh |
 | `goose-cli` | The agent ([goose](https://github.com/aaif-goose/goose)) |
 | `buzz-app`, `buzz-cli`, `buzz-relay`, `buzz-acp` | Self-hosted team chat where agents are members ([Buzz](https://github.com/block/buzz)) |
-| `berd`, `braindump` | More agent tools from the same ecosystem |
+| `berd` | Berd itself, without the mesh setup |
+| `braindump` | More agent tools from the same ecosystem |
 
 The packages are built the way nixpkgs builds them; several are on their way
 into nixpkgs ([mesh-llm](https://github.com/NixOS/nixpkgs/pull/571722)).

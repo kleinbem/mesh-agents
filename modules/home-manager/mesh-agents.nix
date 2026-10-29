@@ -94,6 +94,15 @@ in
       default = true;
       description = "Whether to install goose and `mesh-agents`, set up for the local node.";
     };
+
+    berd.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Whether to install Berd, the desktop app on goose, with a menu entry
+        that opens it on the local node (`mesh-agents-berd`). Linux only.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable (
@@ -105,6 +114,20 @@ in
         ];
         # goose otherwise asks to share usage data, with yes preselected.
         home.sessionVariables.GOOSE_TELEMETRY_OFF = lib.mkDefault "1";
+      })
+
+      (lib.mkIf cfg.berd.enable {
+        home.packages = [ stack.mesh-agents-berd ];
+        xdg.desktopEntries.mesh-agents-berd = {
+          name = "Berd (mesh-agents)";
+          comment = "Berd on your private MeshLLM node";
+          exec = "mesh-agents-berd";
+          icon = "Berd";
+          categories = [
+            "Development"
+            "Utility"
+          ];
+        };
       })
 
       (lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
