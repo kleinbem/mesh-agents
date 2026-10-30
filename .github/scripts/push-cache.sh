@@ -61,6 +61,14 @@ fi
 # whole closure goes up; the cleanup below drops what cache.nixos.org serves.
 nix copy --to "$store" "${push[@]}"
 
+# Nix won't use an HTTP cache without nix-cache-info ("does not appear to be
+# a binary cache"), and `nix copy` to S3 doesn't write one.
+if ! s3 head-object --bucket "$bucket" --key nix-cache-info >/dev/null 2>&1; then
+  printf 'StoreDir: /nix/store\nWantMassQuery: 1\nPriority: 41\n' >"$work/nix-cache-info"
+  s3 put-object --bucket "$bucket" --key nix-cache-info --body "$work/nix-cache-info" \
+    --content-type text/x-nix-cache-info >/dev/null
+fi
+
 # What the current build needs: its narinfos and their NARs.
 nix path-info --store "$CACHE_STORE" --json "${push[@]}" |
   jq -r "$infos"' | (.path | ltrimstr("/nix/store/") | split("-")[0] + ".narinfo"), .url' |
